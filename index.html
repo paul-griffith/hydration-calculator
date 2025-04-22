@@ -140,7 +140,7 @@
     </p>
 
     <label for="weightKg">Enter Weight (kg)</label>
-    <input type="number" id="weightKg" placeholder="" step="any" min="0" oninput="calculateFluids()">
+    <input type="number" id="weightKg" step="any" min="0" oninput="calculateFluids()">
 
     <table id="resultsTable">
         <thead>
@@ -171,6 +171,7 @@
 </div>
 
 <script>
+    const weightInput = document.getElementById('weightKg');
     const resultsTable = document.getElementById('resultsTable');
 
     const dailyElements = [
@@ -185,31 +186,67 @@
         'twoXHourly',
     ].map(item => document.getElementById(item));
 
-    // Clear previous results and hide table if input is invalid or empty
-    function clearResults() {
-        dailyElements.forEach(element => {
-            element.textContent = "-";
-        });
-        hourlyElements.forEach(element => {
-            element.textContent = "-";
-        });
+    function debounce(func, wait) {
+        let timeout;
+        return (...args) => {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
 
+    /**
+     * @param {string} weight
+     */
+    function updateUrlWithWeight(weight) {
+        const currentPath = window.location.pathname;
+        let newUrl = currentPath;
+        let state = null;
+
+        const numericWeight = parseFloat(weight);
+        if (!isNaN(numericWeight) && numericWeight > 0) {
+            newUrl = `${currentPath}?weight=${numericWeight}`;
+            state = { weight: numericWeight };
+        }
+
+        const currentHrefWithoutHash = window.location.href.split('#')[0];
+        if (newUrl !== currentHrefWithoutHash) {
+            history.replaceState(state, '', newUrl);
+        }
+    }
+
+    const debouncedUpdateUrl = debounce(updateUrlWithWeight, 400); // 400ms delay
+
+    function clearResults() {
+        dailyElements.forEach(element => { element.textContent = "-"; });
+        hourlyElements.forEach(element => { element.textContent = "-"; });
         resultsTable.classList.remove("visible");
     }
 
+    /**
+     * @param {string} weightKg
+     * @param {number} scale
+     */
     function calculateHydrationRate(weightKg, scale) {
-        return (70 * Math.pow(weightKg, 0.75) + 20 * weightKg) * scale;
+        const numericWeight = parseFloat(weightKg);
+        if (isNaN(numericWeight) || numericWeight <= 0) {
+            return 0;
+        }
+        return (70 * Math.pow(numericWeight, 0.75) + 20 * numericWeight) * scale;
     }
 
     function calculateFluids() {
-        const weightInput = document.getElementById('weightKg');
+        const weightKgRaw = weightInput.value;
+        const weightKg = parseFloat(weightKgRaw);
 
-        const weightKg = parseFloat(weightInput.value);
-
-        // Validate input: Check if it's a positive number
+        // Validate input
         if (isNaN(weightKg) || weightKg <= 0) {
             clearResults();
-            return; // Stop calculation if input is not a valid positive number
+            debouncedUpdateUrl('');
+            return;
         }
 
         const scales = [1.0, 1.5, 2.0];
@@ -219,18 +256,32 @@
             const dailyRate = calculateHydrationRate(weightKg, scale);
             const hourlyRate = dailyRate / 24;
 
-            // Update the results in the table
             dailyElements[i].textContent = `${Math.round(dailyRate)} mL`;
             hourlyElements[i].textContent = `${Math.round(hourlyRate)} mL`;
         }
 
-        // Make the results table visible
         resultsTable.classList.add('visible');
+        debouncedUpdateUrl(weightKg);
     }
 
-    // Optional: Clear results on page load in case of browser auto-fill
     document.addEventListener('DOMContentLoaded', () => {
-        clearResults();
+        const params = new URLSearchParams(window.location.search);
+
+        if (params.has('weight')) {
+            const weightFromUrl = params.get('weight');
+            const numericWeight = parseFloat(weightFromUrl);
+
+            // Validate parameter
+            if (!isNaN(numericWeight) && numericWeight > 0) {
+                weightInput.value = numericWeight;
+                calculateFluids();
+            } else {
+                clearResults();
+                updateUrlWithWeight('');
+            }
+        } else {
+            clearResults();
+        }
     });
 </script>
 </body>
