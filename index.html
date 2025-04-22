@@ -79,16 +79,20 @@
         }
 
         #resultsTable th {
-            background-color: #e9e9e9;
+            background-color: #ccc;
             color: #333;
             font-weight: bold;
             width: 33%;
         }
 
-        #resultsTable td:last-child {
+        #resultsTable td {
             text-align: right;
-            font-weight: bold;
-            color: #0056b3;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+
+        #resultsTable tr:nth-child(even) {
+            background-color: #e9e9e9;
         }
 
         #resultsTable.visible {
@@ -153,12 +157,12 @@
             <td id="maintenanceHourly">-</td>
         </tr>
         <tr>
-            <td>1.5x Maintenance</td>
+            <td>1.5x</td>
             <td id="onePointFiveDaily">-</td>
             <td id="onePointFiveHourly">-</td>
         </tr>
         <tr>
-            <td>2x Maintenance</td>
+            <td>2x</td>
             <td id="twoXDaily">-</td>
             <td id="twoXHourly">-</td>
         </tr>
